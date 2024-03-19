@@ -1,0 +1,35 @@
+---
+title: "Read data"
+author: "Francisco Palm"
+format: html
+---
+
+## Carga de paquetes
+
+```{r}
+library(readxl)
+library(here)
+```
+
+
+## Lectura de datos
+
+Obtener los datos de su fuente y convertirlo a un formato más adecuado.
+
+## Un factor
+
+```{r}
+un_factor <- read_excel(here("data/Andeva_correlacion_regresion_marzo 2015.xls"),
+  sheet = "Un factor", range = "B4:E9"
+)
+un_factor
+```
+
+```{r}
+saveRDS(
+  un_factor |> 
+    select(-"Dato N°"),
+  here("data/un_factor.RDS")
+)
+```
+

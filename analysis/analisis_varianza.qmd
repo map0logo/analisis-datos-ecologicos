@@ -1,0 +1,354 @@
+---
+title: "Análisis"
+author: "Francisco Palm"
+format: html
+---
+
+## Cargar bibliotecas
+
+```{r}
+library(dplyr)
+library(tidyr)
+library(here)
+```
+
+## Leer datos
+
+```{r}
+un_factor <- readRDS(here("data/un_factor.RDS"))
+un_factor
+```
+
+## Calcular métricas
+
+Tratemos de reproducir lo que hay en la hoja de cálculo.
+
+Poner todos los resultados en una ssola hoja es poco "natural" desde el punto de
+datos "limpios", porque estamos añadiendo nuevas filas que no tienen el mismo
+significado, no son nuevas observaciones, sino métricas.
+
+Así que normalmente datos de distinta estructura o significado implican crear
+nuevos objetos.
+
+```{r}
+metricas1 <- un_factor |> 
+  summarize(
+        n = n(),
+        media = mean(`1`)
+  )
+metricas1
+```
+
+`n()` es una función especial que devuelve el tamaño del grupo, en este caso,
+la totalidad de filas. Y la media se calcula para una fila específica con
+`mean()`.
+
+Si quiero calcular una métrica sobre todas las filas, tengo que utilizar la
+función `across()` (a lo largo), e indicar sobre cuales columnas, en este caso
+`everything()` nos sirve para indicar que son todas las columnas.
+
+```{r}
+conteos <- un_factor |> 
+  summarize(
+      across(
+        everything(),
+        \(x) sum(!is.na(x))
+      )
+    )
+conteos
+```
+
+La expresión `sum(!is.na(x))` es una forma más robusta de calcular el número de
+datos.
+
+Lo siguiente permitiría cálcular de manera similar las medias.
+
+```{r}
+medias <- un_factor |> 
+  summarize(
+      across(
+        everything(),
+        \(x) mean(x, na.rm = TRUE)
+      )
+    )
+medias
+```
+
+Si quiero aplicar dos métricas o más, tengo que indicarlas como una lista.
+
+```{r}
+un_factor |> 
+  summarize(
+    across(
+      everything(),
+      list(
+        n = \(x) sum(!is.na(x)),
+        media= \(x) mean(x, na.rm = TRUE)
+      )
+    )
+  )
+```
+
+Pero cómo debe devolver dos valores por cada columna original, genera nombres de
+la forma "columma_métrica".
+
+Podría realiza mis cálculos así, y después convertirlas en una nueva tabla donde
+las columnas son los nombres originales y las métricas las filas.
+
+```{r}
+metricas_across <- un_factor |> 
+  summarise(
+    across("1": "3", list(
+      n = \(x) sum(!is.na(x)),
+      media = \(x) mean(x, na.rm = TRUE),
+      varianza = \(x) var(x, na.rm = TRUE),
+      suma_x = \(x) sum(x, na.rm = TRUE),
+      suma_x2 = \(x) sum((x)^2, na.rm = TRUE),
+      media_x2 = \(x) sum(x, na.rm = TRUE)^2 / n()
+    )
+  ))
+
+metricas_across
+```
+
+Para hacerlo utilizamos la función `pivot_longer`.
+
+```{r}
+metricas_longer <- metricas_across |> pivot_longer(
+    everything(),
+    names_to = c(".value", "metric"),
+    names_pattern = "^(.*?)_(.*)$"
+  )
+
+metricas_longer
+```
+
+Esto nos introduce varias complejidades en la forma de expresarlo: `".name"` es
+un poco críptico, y la expresión regular `"^(.*?)_(.*)$"` mucho más.
+
+Quizás era más fácil pivotar antes:
+
+```{r}
+un_factor_longer <- un_factor |> 
+  pivot_longer(
+    everything(),
+    names_to = "nivel",
+    values_to = "valor"
+  )
+un_factor_longer
+```
+
+Ahora podemos realizar el mismo summarize, pero agrupando por `"nivel"`:
+
+```{r}
+un_factor_longer |> 
+  group_by(nivel) |> 
+  summarize(
+    n = sum(!is.na(valor)),
+    media = mean(valor, na.rm = TRUE),
+    varianza = var(valor, na.rm = TRUE),
+    suma_x = sum(valor, na.rm = TRUE),
+    suma_x2 = sum((valor)^2, na.rm = TRUE),
+    media_x2 = sum(valor, na.rm = TRUE)^2 / n()
+  )
+
+```
+
+El cálculo es mucho más comprensible, aunque ahora los resultados están por
+filas.
+
+Como vamos a ver más adelante, esta estructura "larga" puede ser útil.
+
+## El análisis de varianza.
+
+Recordemos en qué consiste el análisis de varianza.
+
+Consiste en determinar si el comportamiento de un fenómeno bajo un valor
+específico de un componente es significativamente distinto del comportamiento
+general.
+
+Este "comportamiento" se traduce en la media, y la "diferencia" en la varianza.
+
+Los valores específicos son los "niveles", el "componente" que engloba estos
+niveles se denomina factor.
+
+Así, en términos estadísticos, se estudia si la diferencia de las medias de
+cualquier nivel es significativamente distinta de la media general.
+
+Se puede desglosar en diez pasos:
+
+## Paso 1: Calcular la media general
+
+```{r}
+media_general <- mean(unlist(un_factor))
+media_general
+```
+
+## Paso 2: Calcular la media por cada nivel
+
+```{r}
+medias_nivel <- colMeans(un_factor)
+medias_nivel
+```
+
+## Paso 3: Calcular la suma de cuadrados totales: SCT
+
+Esto es, la suma de los cuadrado de la diferencia entre cada observación y la
+media general.
+
+```{r}
+suma_cuadrados_totales <- sum((un_factor - media_general)^2)
+suma_cuadrados_totales
+```
+
+Esta es en realidad un cálculo de verificación.
+
+## Paso 4: Calcula la suma de cuadrados del factor
+
+O suma de cuadrados entre grupos.
+
+$$
+\sum n_i~(\bar{x}_i - \bar{x})^2
+$$
+
+```{r}
+SCF <- sum(nrow(un_factor) * (medias_nivel - media_general)^2)
+SCF
+```
+
+En este caso, el número de observaciones en cada nivel es el mismo.
+
+Pero si varía el número de observaciones por nivel, tendríamos que utilizar una
+estructura como la de `un_factor_longer`.
+
+```{r}
+SCF <- un_factor_longer |> 
+  group_by(nivel) |> 
+  summarise(cuadrados_factor = n() * (mean(valor) - media_general)^2) |> 
+  summarise(scf = sum(cuadrados_factor)) |> 
+  pull()
+SCF
+```
+
+# Paso 5: Calcular la suma de cuadradors de los residuos
+
+O también, la suma de los cuadrados dentro de los grupos.
+
+$$
+\sum \sum (x_{ij} - \bar{x}_i)^2
+$$
+
+```{r}
+SCR <- un_factor |>
+  rowwise() |> 
+  reframe((c_across(everything()) - medias_nivel)^2) |> 
+  sum()
+SCR
+```
+
+O con la estructura larga:
+
+```{r}
+SCR <- un_factor_longer |> 
+  group_by(nivel) |> 
+  summarise(cuadrados_residuos = sum((valor - mean(valor))^2)) |> 
+  summarise(scr = sum(cuadrados_residuos)) |> 
+  pull()
+SCR
+```
+
+# Paso 6: Calcular los grados de libertad
+
+De los factores o "entre grupos":
+
+$$
+GL_F = n_F - 1 
+$$
+
+```{r}
+n_factor <- ncol(un_factor)
+
+GLF <- n_factor - 1
+GLF
+```
+
+De los residuos o "dentro de los grupos":
+
+$$
+GL_R = N - n_F  = \sum_{i = n_F} n_i - n_F 
+$$
+O si $n_i = n, \forall i$
+
+$$
+GL_R = \sum_{i = n_F} n_i - n_F = n \cdot n_F - n_F = (n - 1)~n_F
+$$
+
+```{r}
+GLR <- (nrow(un_factor) - 1) * n_factor
+GLR
+```
+
+O, de forma alternativa:
+
+```{r}
+n_nivel <- length(unique(un_factor_longer$nivel))
+
+GLR <- nrow(un_factor_longer) - n_nivel
+GLR
+```
+
+
+## Paso 7: Calcular los cuadrados medios
+
+De los factores y de los residuos en la relación a sus respectivos grados de
+libertad.
+
+### Factores
+
+$$
+CM_F = \frac{SC_F}{GL_F}
+$$
+
+```{r}
+CMF <- SCF / GLF
+CMF
+```
+
+### Residuos
+
+$$
+CM_R = \frac{SC_R}{GL_R}
+$$
+
+```{r}
+CMR <- SCR / GLR
+CMR
+```
+
+## Paso 8: Calcular el estadístico F
+
+$$
+F = \frac{CM_F}{CM_R}
+$$
+
+```{r}
+F_cociente <- CMF / CMR
+F_cociente
+```
+
+## Paso 9: Realizar el test de hipótesis
+
+```{r}
+p_value <- pf(F_cociente, GLF, GLR, lower.tail = FALSE)
+p_value
+```
+
+# Cálculo directo con la función `aov`
+
+```{r}
+un_factor_aov <- aov(valor ~ nivel, un_factor_longer)
+summary(un_factor_aov)
+```
+
+
+
