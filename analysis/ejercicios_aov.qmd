@@ -1,6 +1,7 @@
 ---
 title: "Ejercicios propuestos"
 author: "Francisco Palm"
+lang: es
 format: html
 ---
 
