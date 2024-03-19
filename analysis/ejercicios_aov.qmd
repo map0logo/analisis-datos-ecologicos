@@ -1,0 +1,22 @@
+---
+title: "Ejercicios propuestos"
+author: "Francisco Palm"
+format: html
+---
+
+## Ejercicios de Análisis de Varianza
+
+En base al cuaderno `analisis_varianza.qmd`
+
+1. Crear una copia del cuaderno `analisis_varianza.qmd` y aplicar a un conjunto
+de datos distinto.
+
+2. Crear un documento similar a `analisis_varianza.qmd` aplicando las fórmulas
+alternativas de la columna `Computational SS`, de la tabla en la sección *The
+hypothesis test* de https://en.wikipedia.org/wiki/One-way_analysis_of_variance
+
+   Estás fórmulas se aplican mejor sobre una matriz numérica.
+
+3. Crear un cuaderno similar a `analisis_varianza.qmd` para un ejemplo de
+análisis de varianza de dos factores. Busque un ejemplo sencillo en Internet
+como: https://datatab.es/tutorial/two-factorial-anova-without-repeated-measures
