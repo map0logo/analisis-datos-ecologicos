@@ -1,7 +1,10 @@
 ---
-title: "Análisis"
+title: "Ejemplo de Análisis de Varianza"
 author: "Francisco Palm"
-format: html
+lang: es
+format:
+  html:
+    toc: true
 ---
 
 ## Cargar bibliotecas
@@ -159,23 +162,23 @@ filas.
 
 Como vamos a ver más adelante, esta estructura "larga" puede ser útil.
 
-## El análisis de varianza.
+# El análisis de varianza.
 
 Recordemos en qué consiste el análisis de varianza.
 
-Consiste en determinar si el comportamiento de un fenómeno bajo un valor
+* Determinar si *el comportamiento de un fenómeno bajo un valor
 específico de un componente es significativamente distinto del comportamiento
-general.
+general*.
 
-Este "comportamiento" se traduce en la media, y la "diferencia" en la varianza.
+* Este **comportamiento** se traduce en la *media*, y la **diferencia** en la *varianza*.
 
-Los valores específicos son los "niveles", el "componente" que engloba estos
+* Los valores específicos son los *niveles*, el **componente** que engloba estos
 niveles se denomina factor.
 
-Así, en términos estadísticos, se estudia si la diferencia de las medias de
+> Así, en términos estadísticos, se estudia si la diferencia de las medias de
 cualquier nivel es significativamente distinta de la media general.
 
-Se puede desglosar en diez pasos:
+Se puede desglosar en 9 pasos:
 
 ## Paso 1: Calcular la media general
 
@@ -191,7 +194,7 @@ medias_nivel <- colMeans(un_factor)
 medias_nivel
 ```
 
-## Paso 3: Calcular la suma de cuadrados totales: SCT
+## Paso 3: Calcular la suma de cuadrados totales
 
 Esto es, la suma de los cuadrado de la diferencia entre cada observación y la
 media general.
@@ -201,7 +204,7 @@ suma_cuadrados_totales <- sum((un_factor - media_general)^2)
 suma_cuadrados_totales
 ```
 
-Esta es en realidad un cálculo de verificación.
+Este es en realidad un cálculo de verificación.
 
 ## Paso 4: Calcula la suma de cuadrados del factor
 
@@ -230,7 +233,7 @@ SCF <- un_factor_longer |>
 SCF
 ```
 
-# Paso 5: Calcular la suma de cuadradors de los residuos
+## Paso 5: Calcular la suma de cuadrados de los residuos
 
 O también, la suma de los cuadrados dentro de los grupos.
 
@@ -257,7 +260,7 @@ SCR <- un_factor_longer |>
 SCR
 ```
 
-# Paso 6: Calcular los grados de libertad
+## Paso 6: Calcular los grados de libertad
 
 De los factores o "entre grupos":
 
